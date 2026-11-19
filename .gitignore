@@ -1,0 +1,8 @@
+# Secrets (API keys)
+.Renviron
+rsconnect/
+
+# R session files
+.Rhistory
+.RData
+.Rproj.user/

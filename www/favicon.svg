@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- The app's mark (app_logo() in R/utils.R): a globe with a rising bar
+       chart in front of its lower right, in Carbon gray 50, which shows on
+       both light and dark tab bars. No background. -->
+  <defs>
+    <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="32" height="32">
+      <rect width="32" height="32" fill="white"/>
+      <g fill="black">
+        <rect x="16.5" y="22.5" width="6" height="9"/>
+        <rect x="21" y="19" width="6" height="12.5"/>
+        <rect x="25.5" y="15.5" width="6" height="16"/>
+      </g>
+    </mask>
+  </defs>
+  <g mask="url(#cut)" fill="none" stroke="#8d8d8d" stroke-width="2">
+    <circle cx="13" cy="13" r="11"/>
+    <ellipse cx="13" cy="13" rx="4.5" ry="11"/>
+    <line x1="2" y1="13" x2="24" y2="13"/>
+  </g>
+  <g fill="#8d8d8d">
+    <rect x="18" y="24" width="3" height="6"/>
+    <rect x="22.5" y="20.5" width="3" height="9.5"/>
+    <rect x="27" y="17" width="3" height="13"/>
+  </g>
+</svg>

@@ -1,0 +1,285 @@
+/* World Data Dashboard styles. Follow DESIGN.md: type comes from Carbon's
+   cds--type-* classes (set in the R code) or type tokens, and every space
+   from Carbon's spacing tokens (--cds-spacing-*), with the token's value as
+   the fallback. */
+
+/* Page structure ------------------------------------------------------------ */
+
+/* Title, lead and anything that belongs with them (tags, a switcher). The
+   page's content starts spacing-09 below (DESIGN.md). */
+.page-heading {
+  margin-bottom: var(--cds-spacing-09, 3rem);
+}
+
+.page-title {
+  margin-bottom: var(--cds-spacing-06, 1.5rem);
+}
+
+.page-lead {
+  max-width: 40rem;
+  /* line length for prose, DESIGN.md */
+  color: var(--cds-text-secondary, #c6c6c6);
+}
+
+/* Tags under the title (page_heading(tags = )): they belong to the title, so
+   they sit spacing-03 below it, with the usual spacing-06 before the lead */
+.page-title:has(+ .page-heading__tags) {
+  margin-bottom: var(--cds-spacing-03, 0.5rem);
+}
+
+.page-heading__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cds-spacing-03, 0.5rem);
+  margin-bottom: var(--cds-spacing-06, 1.5rem);
+}
+
+/* Carbon's tag has its own margin; the gaps above space the row instead */
+.page-heading__tags > cds-tag {
+  margin: 0;
+}
+
+/* A switcher under the lead */
+.view-switcher {
+  margin-top: var(--cds-spacing-05, 1rem);
+}
+
+/* A content switcher fills its container: keep it to two comfortable
+   options */
+.view-switcher {
+  max-width: 16rem;
+}
+
+/* Sections of a page (page_section()) and groups within them */
+.page-section {
+  margin-top: var(--cds-spacing-10, 4rem);
+}
+
+.page-group {
+  margin-top: var(--cds-spacing-07, 2rem);
+}
+
+.section-heading {
+  margin-bottom: var(--cds-spacing-06, 1.5rem);
+}
+
+.subsection-heading {
+  margin-top: var(--cds-spacing-07, 2rem);
+  margin-bottom: var(--cds-spacing-05, 1rem);
+}
+
+/* Paragraphs of running text outside tiles and components */
+.prose {
+  max-width: 40rem;
+}
+
+/* The last thing on a page: with carbon_page()'s spacing-07 bottom padding,
+   spacing-10 below the last content */
+.carbon-panel> :last-child {
+  margin-bottom: var(--cds-spacing-07, 2rem);
+}
+
+/* Tab content starts spacing-06 below the tabs */
+.tab-content {
+  padding-top: var(--cds-spacing-06, 1.5rem);
+}
+
+/* Tiles ---------------------------------------------------------------------- */
+
+/* Title with a leading icon (tile_title()), spacing-03 above its
+   description */
+.tile-title {
+  margin-bottom: var(--cds-spacing-03, 0.5rem);
+}
+
+/* Tiles in a row are the same height; carbon_grid(row_gap = 7) spaces the
+   rows */
+.indicator-chart,
+.about-tile {
+  height: 100%;
+}
+
+.empty-state-tile {
+  margin-block: var(--cds-spacing-05, 1rem);
+}
+
+/* Chart tiles: title, question, chart, caption */
+.indicator-chart__question {
+  color: var(--cds-text-secondary, #c6c6c6);
+  margin-bottom: var(--cds-spacing-06, 1.5rem);
+}
+
+.chart-caption {
+  color: var(--cds-text-secondary, #c6c6c6);
+  margin-top: var(--cds-spacing-05, 1rem);
+  max-width: 40rem;
+}
+
+/* Icons ---------------------------------------------------------------------- */
+
+/* Icon followed by text, e.g. tile titles and tab labels */
+.with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cds-spacing-03, 0.5rem);
+}
+
+/* Block-level elements (headings, paragraphs) keep their own line */
+h2.with-icon,
+h3.with-icon,
+p.with-icon {
+  display: flex;
+}
+
+.with-icon>.carbon-icon {
+  flex-shrink: 0;
+}
+
+/* At a glance page ----------------------------------------------------------- */
+
+/* Callouts: a group between the heading and the tabs, spacing-08 above the
+   tabs */
+.glance-callouts {
+  margin-bottom: var(--cds-spacing-08, 2.5rem);
+}
+
+.callout-tile {
+  height: 100%;
+}
+
+.callout-tile__label,
+.callout-tile__note,
+.callout-tile__year {
+  color: var(--cds-text-secondary, #c6c6c6);
+}
+
+.callout-tile__label {
+  margin-bottom: var(--cds-spacing-03, 0.5rem);
+}
+
+/* The number, with its unit (e.g. "billion") smaller after it */
+.callout-tile__value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--cds-spacing-02, 0.25rem) var(--cds-spacing-03, 0.5rem);
+  margin-bottom: var(--cds-spacing-03, 0.5rem);
+}
+
+.callout-tile__year {
+  margin-top: var(--cds-spacing-02, 0.25rem);
+  color: var(--cds-text-helper, #a8a8a8);
+}
+
+/* "Table columns" sits spacing-06 above the table it controls */
+.country-list-columns {
+  margin-bottom: var(--cds-spacing-06, 1.5rem);
+}
+
+/* Indicators tab: the two axis selects, spacing-06 above the chart */
+.indicator-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cds-spacing-05, 1rem) var(--cds-spacing-07, 2rem);
+  margin-bottom: var(--cds-spacing-06, 1.5rem);
+}
+
+.indicator-controls>* {
+  flex: 1 1 16rem;
+}
+
+/* Flags: icon-sized, 16px tall like Carbon's small icons, width from the
+   flag's own proportions. The outline keeps white edges visible on light
+   rows. */
+.table-flag {
+  display: block;
+  height: 1rem;
+  width: auto;
+  outline: 1px solid var(--cds-border-subtle, #393939);
+}
+
+/* Wikipedia details in expanded rows (and the profile modal) */
+.wiki-details {
+  padding-block: var(--cds-spacing-05, 1rem);
+  max-width: 40rem;
+}
+
+.wiki-details--empty {
+  color: var(--cds-text-secondary, #c6c6c6);
+}
+
+.wiki-details__source {
+  margin-top: var(--cds-spacing-03, 0.5rem);
+  color: var(--cds-text-secondary, #c6c6c6);
+  gap: var(--cds-spacing-02, 0.25rem);
+}
+
+.wiki-details__source a {
+  color: var(--cds-link-primary, #78a9ff);
+  gap: var(--cds-spacing-02, 0.25rem);
+}
+
+/* App mark before the name in the header (app_logo()) ----------------------- */
+
+/* Carbon doesn't expect an icon in the header name: give it the icon-to-text
+   gap and centre it on the text */
+.app-logo {
+  flex-shrink: 0;
+  margin-inline-end: var(--cds-spacing-03, 0.5rem);
+  vertical-align: middle;
+}
+
+/* Region select in the page header ------------------------------------------- */
+
+/* Just wide enough for the widest option, "Latin America & Caribbean"
+   (~175px), plus Carbon's 1rem left padding and 3rem for the chevron; at
+   most half the header on small screens */
+.header-region {
+  width: min(15rem, 50vw);
+}
+
+/* Country profile modal ------------------------------------------------------ */
+
+/* 48px tall: a recognisable flag without crowding the facts */
+.country-profile__flag {
+  display: block;
+  height: 3rem;
+  width: auto;
+  margin-bottom: var(--cds-spacing-06, 1.5rem);
+  outline: 1px solid var(--cds-border-subtle, #393939);
+}
+
+.country-profile__heading {
+  margin-top: var(--cds-spacing-07, 2rem);
+}
+
+.country-profile .wiki-details {
+  padding-block: var(--cds-spacing-03, 0.5rem) 0;
+}
+
+/* About ---------------------------------------------------------------------- */
+
+.about-tile-link {
+  margin-top: var(--cds-spacing-05, 1rem);
+  color: var(--cds-link-primary, #78a9ff);
+}
+
+.about-tile-link.with-icon {
+  gap: var(--cds-spacing-02, 0.25rem);
+}
+
+.about-list {
+  list-style: disc;
+  padding-left: var(--cds-spacing-05, 1rem);
+}
+
+.about-list li+li {
+  margin-top: var(--cds-spacing-03, 0.5rem);
+}
+
+/* Paragraphs and lists in the About page's tiles and accordion */
+#about p+p,
+#about p+ul,
+#about ul+p {
+  margin-top: var(--cds-spacing-05, 1rem);
+}

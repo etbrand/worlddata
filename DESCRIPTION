@@ -1,0 +1,25 @@
+Package: worlddata
+Title: Demo App for the carbonite package
+Version: 0.0.0.9000
+Authors@R: 
+    person("Evan", "Brand", , "etbrand@gmail.com", role = c("aut", "cre"))
+Description: Demo App for the carbonite package
+License: MIT + file LICENSE
+URL: https://github.com/etbrand/worlddata
+BugReports: https://github.com/etbrand/worlddata/issues
+Depends: 
+    R (>= 4.1.0)
+Imports: 
+    cachem,
+    carbonite,
+    echarts4r,
+    htmltools,
+    htmlwidgets,
+    httr2,
+    shiny
+Encoding: UTF-8
+LazyData: true
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Config/roxygen2/version: 8.1.1
