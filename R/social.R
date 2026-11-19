@@ -123,6 +123,17 @@ trend_or_spread <- function(countries, history, max_lines = trend_max_lines) {
   }
 }
 
-# How many countries a ranked lollipop chart shows at each end (highest and
-# lowest) when a region has more than twice as many
-lollipop_extremes <- 10
+# How many countries a ranked chart (lollipop, dumbbell or bars) shows at
+# each end (highest and lowest) when a region has more than twice as many
+ranked_extremes <- 10
+
+# Caption note for a ranked chart of `n` countries with a dashed line at
+# `median` (e.g. "the median"), saying when only the highest and lowest
+# are shown
+ranked_note <- function(n, median = "the median", extremes = ranked_extremes) {
+  if (n > 2 * extremes) {
+    sprintf("Showing the highest and lowest %d; the dashed line is %s of all %d.", extremes, median, n)
+  } else {
+    sprintf("The dashed line is %s.", median)
+  }
+}

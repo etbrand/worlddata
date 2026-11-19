@@ -28,6 +28,21 @@ test_that("errors sent with HTTP 200 become api_errors", {
   )
 })
 
+test_that("bodies of the wrong shape become api_errors, not R errors", {
+  for (body in list(NULL, list(), list("oops"), list(list(page = 1)), list(list(message = "busy")))) {
+    expect_error(check_wb_body(body), "The World Bank API returned an error", class = "api_error")
+  }
+})
+
+test_that("an indicator response the app can't read is an api_error", {
+  local_empty_cache()
+  # Page info, then rows that aren't objects
+  httr2::local_mocked_responses(function(req) httr2::response_json(body = list(list(page = 1), list("x", "y"))))
+
+  expect_message(err <- expect_error(fetch_wb_indicator("gdp_per_capita"), class = "api_error"), "Unexpected error")
+  expect_equal(conditionMessage(err), wb_unreadable_message)
+})
+
 test_that("an indicator is requested for all countries, most recent value, and cached", {
   local_empty_cache()
   calls <- 0
@@ -111,5 +126,42 @@ test_that("the indicators module joins data and reports API errors", {
     session$setInputs(y = "internet")
     expect_s3_class(scatter_data(), "api_error")
     expect_false(can_draw())
+  })
+})
+
+test_that("the same indicator on both axes hides the chart and shows a warning", {
+  local_mocked_bindings(fetch_wb_indicator = function(key) {
+    data.frame(iso3 = c("IND", "CHN"), year = 2024L, value = if (key == "gdp_per_capita") c(2700, 13900) else c(72, 78))
+  })
+  countries <- shiny::reactiveVal(data.frame(
+    name = c("India", "China"), iso3 = c("IND", "CHN"), population = c(1.4e9, 1.4e9)
+  ))
+
+  shiny::testServer(mod_indicators_server, args = list(countries = countries), {
+    session$setInputs(x = "gdp_per_capita", y = "life_expectancy")
+    expect_true(can_draw())
+    expect_null(output$status$html)
+    expect_error(output$axes_notice, class = "shiny.silent.error")
+
+    session$setInputs(y = "gdp_per_capita")
+    expect_true(same_indicator())
+    expect_false(can_draw())
+    html <- output$axes_notice$html
+    expect_match(html, "<cds-inline-notification", fixed = TRUE)
+    expect_match(html, 'kind="warning"', fixed = TRUE)
+    expect_match(html, "Choose two different indicators", fixed = TRUE)
+    expect_match(html, "Both axes show GDP per capita (US$).", fixed = TRUE)
+    # The chart and caption are invisible but keep their space, so the tile
+    # doesn't change size; no other status shows
+    expect_match(html, "#proxy1-chart, #proxy1-caption { visibility: hidden; }", fixed = TRUE)
+    expect_match(output$caption$html, "have data for both indicators", fixed = TRUE)
+    expect_error(output$status, class = "shiny.silent.error")
+
+    # A different indicator again: the chart comes back
+    session$setInputs(x = "life_expectancy")
+    expect_false(same_indicator())
+    expect_true(can_draw())
+    expect_error(output$axes_notice, class = "shiny.silent.error")
+    expect_null(output$status$html)
   })
 })

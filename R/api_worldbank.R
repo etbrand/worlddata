@@ -97,8 +97,11 @@ wb_indicator_choices <- function() {
 # The API answers with HTTP 200 even for errors, as [{message: [...]}];
 # data comes as [metadata, rows]. Signals an api_error for the former.
 check_wb_body <- function(body) {
-  if (length(body) < 2 || !is.null(body[[1]]$message)) {
-    detail <- body[[1]]$message[[1]]$value
+  # Anything but [{page info}, [rows]] is an error, including a body that
+  # isn't a list at all
+  header <- if (is.list(body) && length(body) >= 1 && is.list(body[[1]])) body[[1]]
+  if (length(body) < 2 || !is.list(header) || !is.null(header$message)) {
+    detail <- if (is.list(header$message) && is.list(header$message[[1]])) header$message[[1]]$value
     stop(api_error(paste0(
       "The World Bank API returned an error",
       if (!is.null(detail)) paste0(": ", detail) else "."
@@ -131,15 +134,21 @@ fetch_wb_indicator <- function(key) {
   }
 
   cached(paste("worldbank", indicator$id), cache = wb_cache, function() {
-    httr2::request(worldbank_api_url) |>
-      httr2::req_url_path_append("country", "all", "indicator", indicator$id) |>
-      # mrnev = most recent non-empty value per country; ~270 countries and
-      # aggregates fit on one page
-      httr2::req_url_query(format = "json", mrnev = 1, per_page = 1000) |>
-      perform_json(worldbank_api_name) |>
-      parse_wb_indicator()
+    as_api_error(
+      httr2::request(worldbank_api_url) |>
+        httr2::req_url_path_append("country", "all", "indicator", indicator$id) |>
+        # mrnev = most recent non-empty value per country; ~270 countries and
+        # aggregates fit on one page
+        httr2::req_url_query(format = "json", mrnev = 1, per_page = 1000) |>
+        perform_json(worldbank_api_name) |>
+        parse_wb_indicator(),
+      wb_unreadable_message
+    )
   })
 }
+
+# For a World Bank response in a shape the app can't read
+wb_unreadable_message <- "The World Bank API sent data the app couldn't read. Try again later."
 
 # Yearly values of indicator `key` for every country from `start` to `end`:
 # data frame of iso3, year, value (only years with a value). About 7,000
@@ -164,9 +173,11 @@ fetch_wb_history <- function(key, start = 2000, end = as.integer(format(Sys.Date
         perform_json(worldbank_api_name)
     }
 
-    first <- request_page(1)
-    pages <- c(list(first), lapply(seq_len(max(0, wb_page_count(first) - 1)) + 1, request_page))
-    do.call(rbind, lapply(pages, parse_wb_indicator))
+    as_api_error({
+      first <- request_page(1)
+      pages <- c(list(first), lapply(seq_len(max(0, wb_page_count(first) - 1)) + 1, request_page))
+      do.call(rbind, lapply(pages, parse_wb_indicator))
+    }, wb_unreadable_message)
   })
 }
 

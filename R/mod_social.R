@@ -63,30 +63,26 @@ mod_social_server <- function(id, countries, region = NULL) {
       life = list(
         data = function(cs, h) ranked_latest(cs, h, max_countries = Inf),
         chart = function(d) {
-          lollipop_chart(d, "Years", digits = 1, extremes = lollipop_extremes, median = stats::median(d$value))
+          lollipop_chart(d, "Years", digits = 1, extremes = ranked_extremes, median = stats::median(d$value))
         },
         rows = function(d) nrow(d),
         years = function(d) d$year,
         latest = TRUE,
         per_country = FALSE,
-        note = function(d) {
-          if (nrow(d) > 2 * lollipop_extremes) {
-            sprintf(
-              "Showing the highest and lowest %d; the dashed line is the median of all %d.",
-              lollipop_extremes, nrow(d)
-            )
-          } else {
-            "The dashed line is the median."
-          }
-        }
+        note = function(d) ranked_note(nrow(d))
       ),
+      # Every country, ranked by its latest value; with many countries, the
+      # highest and lowest 10, with the median latest value of them all
       internet = list(
-        data = function(cs, h) change_since(cs, h),
-        chart = function(d) dumbbell_chart(d, "% of population", digits = 0),
+        data = function(cs, h) change_since(cs, h, max_countries = Inf),
+        chart = function(d) {
+          dumbbell_chart(d, "% of population", digits = 0, extremes = ranked_extremes, median = stats::median(d$end))
+        },
         rows = function(d) nrow(d),
         years = function(d) c(d$start_year, d$end_year),
         latest = FALSE,
-        per_country = TRUE
+        per_country = FALSE,
+        note = function(d) ranked_note(nrow(d), median = "the median latest value")
       ),
       fertility = list(
         data = function(cs, h) binned_latest(cs, h, width = 0.5),

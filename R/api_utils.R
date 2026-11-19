@@ -154,5 +154,30 @@ perform_json <- function(req, source, timeout = 10) {
     stop(api_error(message, status))
   }
 
+  # Not JSON, e.g. a maintenance page served while an API is down
+  if (is.null(body)) {
+    stop(api_error(
+      sprintf(
+        "%s isn't responding normally right now. Try again later.",
+        tools::toTitleCase(source)
+      ),
+      status
+    ))
+  }
+
   body
+}
+
+# Run `expr`, turning any error that isn't already an api_error into one
+# with `message` (logging the original), so a response in an unexpected
+# shape shows a message in the UI rather than R error text or ending the
+# session
+as_api_error <- function(expr, message) {
+  tryCatch(expr, error = function(e) {
+    if (inherits(e, "api_error")) {
+      stop(e)
+    }
+    message(sprintf("Unexpected error (%s): %s", message, conditionMessage(e)))
+    stop(api_error(message))
+  })
 }

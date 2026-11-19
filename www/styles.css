@@ -283,3 +283,32 @@ p.with-icon {
 #about ul+p {
   margin-top: var(--cds-spacing-05, 1rem);
 }
+/* Notice when the country data couldn't be loaded (mod_data_status.R):
+   above the page heading, a group of its own (spacing-08); the button
+   16px under the notification, like a row of buttons (DESIGN.md) */
+.data-status {
+  margin-bottom: var(--cds-spacing-08, 2.5rem);
+}
+
+.data-status cds-inline-notification {
+  max-width: none;
+  margin: 0 0 var(--cds-spacing-05, 1rem);
+}
+
+/* Comparisons: the same indicator on both axes (mod_indicators.R). The
+   warning lies over the top of the (invisible) chart rather than above it,
+   so the tile keeps its size; the controls above already leave spacing-06.
+   Full width like the controls. */
+.indicator-chart-area {
+  position: relative;
+}
+
+.indicator-chart-area .indicator-notice {
+  position: absolute;
+  inset: 0 0 auto;
+}
+
+.indicator-notice cds-inline-notification {
+  max-width: none;
+  margin: 0;
+}

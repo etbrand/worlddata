@@ -36,7 +36,13 @@ mod_indicators_ui <- function(id) {
             )
           ),
           shiny::uiOutput(ns("status")),
-          echarts4r::echarts4rOutput(ns("chart"), height = "560px"),
+          # The same-indicator warning goes over the chart, so the tile
+          # keeps its size (see .indicator-chart-area in www/styles.css)
+          htmltools::div(
+            class = "indicator-chart-area",
+            echarts4r::echarts4rOutput(ns("chart"), height = "560px"),
+            shiny::uiOutput(ns("axes_notice"))
+          ),
           shiny::uiOutput(ns("caption"))
         )
       )
@@ -81,13 +87,38 @@ mod_indicators_server <- function(id, countries, region = NULL) {
     # Whether there's anything to plot. A reactiveVal only notifies when its
     # value changes, so the chart below redraws when this flips, not every
     # time the data changes.
+    # The same indicator on both axes: nothing to compare, so the chart is
+    # hidden and a notification asks for two different ones
+    same_indicator <- shiny::reactive({
+      shiny::req(input$x, input$y)
+      identical(input$x, input$y)
+    })
+
     can_draw <- shiny::reactiveVal(FALSE)
     shiny::observe({
+      if (same_indicator()) {
+        can_draw(FALSE)
+        return()
+      }
       d <- scatter_data()
       can_draw(is.data.frame(d) && any(has_both(d)))
     })
 
+    # Over the chart, which (with its caption) is made invisible but keeps
+    # its space, so the tile doesn't change size
+    output$axes_notice <- shiny::renderUI({
+      shiny::req(same_indicator())
+      htmltools::tagList(
+        same_indicator_notice(input$x),
+        htmltools::tags$style(sprintf(
+          "#%s, #%s { visibility: hidden; }",
+          session$ns("chart"), session$ns("caption")
+        ))
+      )
+    })
+
     output$status <- shiny::renderUI({
+      shiny::req(!same_indicator())
       d <- scatter_data()
       message <- if (inherits(d, "api_error")) {
         conditionMessage(d)
@@ -145,6 +176,9 @@ mod_indicators_server <- function(id, countries, region = NULL) {
         axis_scales(scales)
         return()
       }
+      if (same_indicator()) {
+        return()
+      }
       d <- scatter_data()
       if (!is.data.frame(d) || !any(has_both(d))) {
         return()
@@ -158,6 +192,8 @@ mod_indicators_server <- function(id, countries, region = NULL) {
       echarts4r::e_merge(proxy)
     })
 
+    # Still rendered for the same indicator on both axes (invisible, see
+    # axes_notice), so its space is kept
     output$caption <- shiny::renderUI({
       d <- scatter_data()
       shiny::req(is.data.frame(d))
@@ -186,6 +222,22 @@ mod_indicators_server <- function(id, countries, region = NULL) {
       })
     })
   })
+}
+
+# Warning shown in place of the chart when both axes have indicator `key`
+same_indicator_notice <- function(key) {
+  htmltools::div(
+    class = "indicator-notice",
+    carbonite::carbon_inline_notification(
+      title = "Choose two different indicators",
+      subtitle = sprintf(
+        "Both axes show %s. Pick a different indicator for one of them to compare the two.",
+        wb_indicators[[key]]$label
+      ),
+      kind = "warning",
+      close_button = FALSE
+    )
+  )
 }
 
 # The World Bank's seven regions as bubbles (name, iso3, population), sized

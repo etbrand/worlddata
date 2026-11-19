@@ -187,7 +187,7 @@ about_panel <- function() {
               ),
               htmltools::tags$li(
                 htmltools::strong("Internet use"),
-                ": each country's share around 2000 and now."
+                ": each country's share around 2000 and now, ranked by the latest. For a region with more than 20, the highest and lowest 10, with a dashed line at the median latest value of them all."
               ),
               htmltools::tags$li(
                 htmltools::strong("Fertility rate"),
@@ -198,10 +198,6 @@ about_panel <- function() {
                 ": the trend since 2000. For a region with up to 10 countries, a line per ",
                 "country (hover to see which), with the median highlighted; for more, the median with a band covering the middle half of countries."
               )
-            ),
-            htmltools::p(
-              "For the whole world, the internet chart shows ",
-              "the 60 most populous countries."
             )
           ),
           carbonite::carbon_accordion_item(
@@ -246,17 +242,16 @@ about_panel <- function() {
               htmltools::tags$li(
                 htmltools::strong("Economic growth"),
                 ": real GDP growth for each country and year since 2005, red when ",
-                "the economy shrank and blue when it grew."
+                "the economy shrank and blue when it grew. Countries are ranked by ",
+                "their average yearly growth, compounded over the period; for a ",
+                "region with more than 20, the highest and lowest 10."
               ),
               htmltools::tags$li(
                 htmltools::strong("Unemployment"),
                 ": countries ranked by their latest unemployment rate (International ",
-                "Labour Organization estimates)."
+                "Labour Organization estimates). For a region with more than 20, the ",
+                "highest and lowest 10, with a dashed line at the median of them all."
               )
-            ),
-            htmltools::p(
-              "For the whole world, the growth and unemployment charts show the 60 ",
-              "most populous countries."
             )
           ),
           carbonite::carbon_accordion_item(

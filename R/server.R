@@ -61,7 +61,9 @@ table_title <- function(region) {
 table_columns <- function(col_names) {
   lapply(stats::setNames(nm = col_names), \(col) {
     formatter <- column_formatters[[col]]
-    if (is.null(formatter)) formatter <- format_missing
+    if (is.null(formatter)) {
+      formatter <- format_missing
+    }
 
     carbonite::carbon_table_column(
       label = unname(column_labels[col]),
@@ -81,12 +83,45 @@ table_column_names <- function(selected) {
   c("name", setdiff(as.character(selected), "name"))
 }
 
+# Pages with a notice for when the country list can't be loaded: the ids of
+# their mod_data_status_ui()s
+data_status_pages <- c("status_glance", "status_social", "status_economic", "status_compare")
+
+# Shown when loading the country list fails in a way that isn't an api_error
+countries_unavailable_message <- "Something went wrong while loading the list of countries."
+
+# The region's countries, or an api_error if they couldn't be loaded. Any
+# other error is turned into an api_error too: an error read by an observer
+# would end the session.
+load_countries <- function(region) {
+  tryCatch(
+    as_api_error(fetch_data(region = region), countries_unavailable_message),
+    api_error = identity
+  )
+}
+
 server <- function(input, output, session) {
-  fetched_data <- reactive({
+  # Bumped by "Try again"; failures aren't cached, so this refetches
+  retries <- reactiveVal(0)
+
+  countries_result <- reactive({
     req(input$region)
-    print2("FETCHED DATA")
-    fetch_data(region = input$region)
+    retries()
+    load_countries(input$region)
   })
+
+  # Everything else reads this. While the country list can't be loaded,
+  # req() quietly stops whatever depends on it (outputs stay empty and
+  # observers do nothing), and each page shows a notice instead.
+  fetched_data <- reactive({
+    countries <- countries_result()
+    req(!inherits(countries, "api_error"))
+    countries
+  })
+
+  for (id in data_status_pages) {
+    mod_data_status_server(id, result = countries_result, retry = function() retries(retries() + 1))
+  }
 
   table_data <- reactive({
     req(fetched_data())
@@ -105,7 +140,9 @@ server <- function(input, output, session) {
       # Each country's Wikipedia summary, fetched only when its row is first
       # expanded. `i` is the row number: `data` has the same rows as
       # `countries` but not the Wikipedia URL.
-      row_details = function(row, i) country_details(countries[i, , drop = FALSE]),
+      row_details = function(row, i) {
+        country_details(countries[i, , drop = FALSE])
+      },
       lazy_details = TRUE,
       title = table_title(input$region),
       description = sprintf(
@@ -131,9 +168,19 @@ server <- function(input, output, session) {
     click <- input$table_cell_click
     countries <- fetched_data()
     i <- as.integer(click$row)
-    req(identical(click$column, "name"), length(i) == 1, !is.na(i), i >= 1, i <= nrow(countries))
+    req(
+      identical(click$column, "name"),
+      length(i) == 1,
+      !is.na(i),
+      i >= 1,
+      i <= nrow(countries)
+    )
 
-    carbonite::show_carbon_modal(country_profile_modal(countries[i, , drop = FALSE]))
+    carbonite::show_carbon_modal(country_profile_modal(countries[
+      i,
+      ,
+      drop = FALSE
+    ]))
   })
 
   output$language_cloud <- echarts4r::renderEcharts4r({

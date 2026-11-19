@@ -39,9 +39,46 @@ yearly_spread <- function(countries, history, min_countries = 3) {
   list(spread = out, countries = length(unique(values$iso3[values$year %in% years])))
 }
 
+# Each country's growth over the years of `grid` (from yearly_grid(), with
+# yearly growth in %), compounded: `total` (% over its years with data) and
+# `annual` (the average yearly rate, in %, that compounds to the same
+# total). Ranked by `annual`, smallest first, as countries can be missing
+# years: name, first, last (years), years (with data), total, annual.
+growth_ranking <- function(grid) {
+  by_country <- split(grid, grid$name)
+  out <- do.call(rbind, lapply(by_country, function(d) {
+    factor <- prod(1 + d$value / 100)
+    data.frame(
+      name = d$name[1],
+      first = min(d$year),
+      last = max(d$year),
+      years = nrow(d),
+      total = (factor - 1) * 100,
+      annual = (factor^(1 / nrow(d)) - 1) * 100
+    )
+  }))
+  if (is.null(out)) {
+    return(data.frame(name = character(), first = integer(), last = integer(), years = integer(),
+                      total = numeric(), annual = numeric()))
+  }
+  out <- out[order(out$annual, out$name), , drop = FALSE]
+  rownames(out) <- NULL
+  out
+}
+
+# Caption note for the growth heatmap of `n` countries
+growth_note <- function(n, extremes = ranked_extremes) {
+  ranked <- "Ranked by average yearly growth, compounded over each country's years with data"
+  if (n > 2 * extremes) {
+    sprintf("%s; showing the highest and lowest %d of %d.", ranked, extremes, n)
+  } else {
+    paste0(ranked, ".")
+  }
+}
+
 # Yearly values from `from_year` for each country in the region (capped at
-# the most populous, as each country is a row): name, year, value. Countries
-# are in alphabetical order.
+# `max_countries`, the most populous): name, year, value. Countries are in
+# alphabetical order.
 yearly_grid <- function(countries, history, from_year = 2005, max_countries = social_max_countries) {
   region <- region_countries(countries, max_countries)[, c("name", "iso3")]
   out <- merge(region, history[history$year >= from_year, , drop = FALSE], by = "iso3")

@@ -51,7 +51,7 @@ ui <- function() {
       htmltools::tags$head(
         # Bump `v` when styles.css changes, or browsers may keep using an
         # old cached copy
-        htmltools::tags$link(rel = "stylesheet", href = "www/styles.css?v=15"),
+        htmltools::tags$link(rel = "stylesheet", href = "www/styles.css?v=18"),
         # Bump `v` when the icon changes; browsers cache favicons aggressively
         htmltools::tags$link(
           rel = "shortcut icon",
@@ -67,6 +67,7 @@ ui <- function() {
           href = "www/apple-touch-icon.png?v=6"
         )
       ),
+      mod_data_status_ui("status_glance"),
       carbonite::carbon_grid(
         carbonite::carbon_column(
           width = 16,
@@ -136,14 +137,17 @@ ui <- function() {
     ),
     carbonite::carbon_panel(
       "social",
+      mod_data_status_ui("status_social"),
       mod_social_ui("social")
     ),
     carbonite::carbon_panel(
       "economic",
+      mod_data_status_ui("status_economic"),
       mod_economic_ui("economic")
     ),
     carbonite::carbon_panel(
       "compare",
+      mod_data_status_ui("status_compare"),
       mod_indicators_ui("indicators")
     ),
     about_panel()

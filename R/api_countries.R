@@ -81,7 +81,7 @@ fetch_wb_countries <- function() {
     httr2::req_url_query(format = "json", per_page = 1000) |>
     perform_json(worldbank_api_name)
 
-  countries <- parse_wb_countries(body)
+  countries <- as_api_error(parse_wb_countries(body), wb_unreadable_message)
   latest <- function(key) {
     values <- fetch_wb_indicator(key)
     values$value[match(countries$iso3, values$iso3)]

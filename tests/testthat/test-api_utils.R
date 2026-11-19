@@ -108,3 +108,31 @@ test_that("other HTTP errors say which API and status", {
   expect_match(conditionMessage(err), "(HTTP 503)", fixed = TRUE)
   expect_equal(err$status, 503)
 })
+
+test_that("a page that isn't JSON (e.g. a maintenance page) is an api_error", {
+  httr2::local_mocked_responses(function(req) {
+    httr2::response(
+      status_code = 200,
+      headers = list(`Content-Type` = "text/html"),
+      body = charToRaw("<html><body>Down for maintenance</body></html>")
+    )
+  })
+
+  expect_error(
+    perform_json(json_request(), "the Example API"),
+    "The Example API isn't responding normally right now.",
+    class = "api_error"
+  )
+})
+
+test_that("as_api_error turns unexpected errors into api_errors, logging the original", {
+  err <- expect_error(
+    expect_message(as_api_error(stop("subscript out of bounds"), "Couldn't read it."), "subscript out of bounds"),
+    class = "api_error"
+  )
+  expect_equal(conditionMessage(err), "Couldn't read it.")
+
+  # api_errors keep their own message
+  expect_error(as_api_error(stop(api_error("Busy.")), "Couldn't read it."), "^Busy\\.$", class = "api_error")
+  expect_equal(as_api_error(1 + 1, "unused"), 2)
+})

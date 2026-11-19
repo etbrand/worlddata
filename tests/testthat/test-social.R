@@ -232,7 +232,7 @@ test_that("the urban caption says how to read the chart", {
   }
 })
 
-# Lollipop: highest and lowest ----------------------------------------------------
+# Ranked charts: highest and lowest ----------------------------------------------
 
 ranked_of <- function(n) {
   data.frame(name = sprintf("Country %02d", seq_len(n)), iso3 = sprintf("C%02d", seq_len(n)),
@@ -240,21 +240,21 @@ ranked_of <- function(n) {
 }
 
 test_that("a long ranking shows only the highest and lowest, with headings and a gap", {
-  rows <- lollipop_rows(ranked_of(30), extremes = 10)
+  rows <- split_rows(ranked_of(30), extremes = 10)
 
   expect_equal(nrow(rows), 24)
   # From the bottom of the chart up
   expect_equal(rows$name[1:10], sprintf("Country %02d", 1:10))
-  expect_equal(rows$name[11:13], c("Lowest 10", " ", "  "))
+  expect_equal(rows$name[11:13], c("Lowest", " ", "  "))
   expect_equal(rows$name[14:23], sprintf("Country %02d", 21:30))
-  expect_equal(rows$name[24], "Highest 10")
+  expect_equal(rows$name[24], "Highest")
   expect_equal(which(rows$heading), c(11L, 24L))
   expect_true(all(is.na(rows$value[c(11, 12, 13, 24)])))
   expect_false(anyDuplicated(rows$name) > 0)
 })
 
 test_that("a short ranking shows every row", {
-  rows <- lollipop_rows(ranked_of(20), extremes = 10)
+  rows <- split_rows(ranked_of(20), extremes = 10)
   expect_equal(rows$name, sprintf("Country %02d", 1:20))
   expect_false(any(rows$heading))
 })
@@ -264,7 +264,7 @@ test_that("the split lollipop has headings, a median line and fits its rows", {
   opts <- e$x$opts
 
   expect_length(opts$series[[2]]$data, 20)
-  expect_match(opts$yAxis[[1]]$axisLabel$formatter, "'Lowest 10', 'Highest 10'", fixed = TRUE)
+  expect_match(opts$yAxis[[1]]$axisLabel$formatter, "'Lowest', 'Highest'", fixed = TRUE)
   expect_equal(opts$series[[2]]$markLine$data[[1]]$xAxis, 65.5)
   expect_equal(opts$series[[2]]$markLine$label$formatter, "Median 65.5")
   expect_match(render_hook(e, "el.style.height"), sprintf("'%dpx'", rows_chart_height(24)), fixed = TRUE)
@@ -299,4 +299,63 @@ test_that("the headings use the theme's primary text color, not a fixed one", {
   expect_equal(e$x$opts$yAxis[[1]]$axisLabel$rich$heading$color, "var(--cds-text-primary)")
   # Resolved for the current theme when the chart renders
   expect_false(is.null(render_hook(e, "light-dark")))
+})
+
+test_that("split rows keep the data's columns, blank for headings and the gap", {
+  d <- data.frame(name = sprintf("C%02d", 1:30), start_year = 2000L, start = 1:30, end_year = 2024L, end = 31:60)
+  rows <- split_rows(d, extremes = 10)
+
+  expect_named(rows, c(names(d), "heading"))
+  expect_true(all(is.na(rows$start[c(11, 12, 13, 24)])))
+  expect_type(rows$start_year, "integer")
+  expect_equal(split_gap(rows), c(12L, 13L))
+  expect_length(split_gap(split_rows(d[1:20, ], extremes = 10)), 0)
+})
+
+# `n` countries' internet use around 2000 and now, sorted by now
+changes_of <- function(n) {
+  data.frame(name = sprintf("Country %02d", seq_len(n)), iso3 = sprintf("C%02d", seq_len(n)),
+             start_year = 2000L, start = seq_len(n) / 10, end_year = 2024L, end = seq_len(n) + 50)
+}
+
+test_that("a long dumbbell chart shows only the highest and lowest, with a tear and median", {
+  e <- dumbbell_chart(changes_of(30), "% of population", extremes = 10, median = 65.5)
+  opts <- e$x$opts
+
+  expect_equal(unlist(opts$yAxis[[1]]$data)[c(11, 24)], c("Lowest", "Highest"))
+  expect_match(opts$yAxis[[1]]$axisLabel$formatter, "'Lowest', 'Highest'", fixed = TRUE)
+  # A dot of each kind per country shown; connectors for every row
+  expect_length(opts$series[[3]]$data, 20)
+  expect_length(opts$series[[4]]$data, 20)
+  expect_length(opts$series[[1]]$data, 24)
+  expect_equal(opts$series[[4]]$data[[20]]$value[[1]], 80)
+  expect_equal(opts$series[[4]]$markLine$data[[1]]$xAxis, 65.5)
+  expect_match(render_hook(e, "tear-gap"), "[11, 12].map(", fixed = TRUE)
+  expect_match(render_hook(e, "el.style.height"), sprintf("'%dpx'", rows_chart_height(24, extra = 20)), fixed = TRUE)
+
+  full <- dumbbell_chart(changes_of(20), "% of population", extremes = 10)
+  expect_length(full$x$opts$series[[4]]$data, 20)
+  expect_null(render_hook(full, "tear-gap"))
+  expect_null(full$x$opts$series[[4]]$markLine)
+})
+
+test_that("the internet chart ranks every country and says what's shown", {
+  # More than the 60 most populous, which the chart used to stop at
+  data <- many_countries(70)
+  local_mocked_bindings(fetch_wb_history = function(key, ...) data$history)
+
+  shiny::testServer(mod_social_server, args = list(countries = shiny::reactiveVal(data$countries)), {
+    expect_match(
+      output$internet_caption$html,
+      "Showing the highest and lowest 10; the dashed line is the median latest value of all 70.",
+      fixed = TRUE
+    )
+    expect_no_match(output$internet_caption$html, "most populous", fixed = TRUE)
+  })
+})
+
+test_that("ranked_note says when only the highest and lowest are shown", {
+  expect_equal(ranked_note(30), "Showing the highest and lowest 10; the dashed line is the median of all 30.")
+  expect_equal(ranked_note(20), "The dashed line is the median.")
+  expect_equal(ranked_note(5, median = "the median latest value"), "The dashed line is the median latest value.")
 })

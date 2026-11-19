@@ -73,21 +73,29 @@ mod_economic_server <- function(id, countries, region = NULL) {
         latest = FALSE,
         per_country = FALSE
       ),
+      # Every country, ranked by its compounded average yearly growth; with
+      # many countries, the fastest and slowest 10
       growth = list(
-        data = function(cs, h) yearly_grid(cs, h, from_year = 2005),
-        chart = function(d) growth_heatmap(d, "Real GDP growth"),
+        data = function(cs, h) yearly_grid(cs, h, from_year = 2005, max_countries = Inf),
+        chart = function(d) growth_heatmap(d, "Real GDP growth", extremes = ranked_extremes),
         rows = function(d) length(unique(d$name)),
         years = function(d) d$year,
         latest = FALSE,
-        per_country = TRUE
+        per_country = FALSE,
+        note = function(d) growth_note(length(unique(d$name)))
       ),
+      # Every country, ranked; with many countries, the highest and lowest
+      # 10, with the median of them all
       unemployment = list(
-        data = function(cs, h) ranked_latest(cs, h),
-        chart = function(d) ranked_bar_chart(d, "% of labor force", digits = 1),
+        data = function(cs, h) ranked_latest(cs, h, max_countries = Inf),
+        chart = function(d) {
+          ranked_bar_chart(d, "% of labor force", digits = 1, extremes = ranked_extremes, median = stats::median(d$value))
+        },
         rows = function(d) nrow(d),
         years = function(d) d$year,
         latest = TRUE,
-        per_country = TRUE
+        per_country = FALSE,
+        note = function(d) ranked_note(nrow(d))
       )
     )
 

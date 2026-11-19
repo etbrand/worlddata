@@ -77,8 +77,7 @@ tooltip_number_js <- function(digits) {
 # scale. `median`: draw a dashed line at this value (e.g. the median of all
 # the rows, including those not shown).
 lollipop_chart <- function(data, label, digits = 1, highlight = NULL, extremes = NULL, median = NULL) {
-  rows <- lollipop_rows(data, extremes)
-  headings <- rows$name[rows$heading]
+  rows <- split_rows(data[, c("name", "year", "value")], extremes)
   label_width <- country_label_width(rows$name)
   countries <- which(!is.na(rows$value))
   points <- lapply(countries, function(i) {
@@ -97,32 +96,10 @@ lollipop_chart <- function(data, label, digits = 1, highlight = NULL, extremes =
     )
   # Room above the plot for the median line's label
   e$x$opts$grid <- list(left = label_width + 24, right = 24, top = if (is.null(median)) 16 else 32, bottom = 48)
-  axis <- country_axis(rows$name, label_width)
-  if (length(headings)) {
-    # Headings in the label column, in semibold like a small heading
-    axis$axisLabel$formatter <- htmlwidgets::JS(sprintf(
-      "v => [%s].includes(v) ? '{heading|' + v + '}' : v",
-      paste(vapply(headings, js_string, ""), collapse = ", ")
-    ))
-    axis$axisLabel$rich <- list(heading = list(fontWeight = 600, fontSize = 12, color = highlight_color))
-  }
-  e$x$opts$yAxis <- list(axis)
+  e$x$opts$yAxis <- list(split_axis(rows, label_width))
   e$x$opts$xAxis <- list(value_axis(label))
   dots <- list(type = "scatter", data = points, symbolSize = 9, z = 3)
-  if (!is.null(median)) {
-    dots$markLine <- list(
-      silent = TRUE,
-      symbol = "none",
-      data = list(list(xAxis = median)),
-      lineStyle = list(color = social_muted, type = "dashed", width = 1),
-      label = list(
-        position = "end",
-        color = plot_colors$text,
-        fontSize = 12,
-        formatter = paste("Median", format(round(median, digits), nsmall = digits))
-      )
-    )
-  }
+  dots$markLine <- median_line(median, digits)
   e$x$opts$series <- list(
     # Stems: thin bars, drawn from the left edge of the axis (none for the
     # heading and gap rows, whose value is NA)
@@ -131,13 +108,94 @@ lollipop_chart <- function(data, label, digits = 1, highlight = NULL, extremes =
     dots
   )
   e <- htmlwidgets::onRender(e, resize_to_rows_js(nrow(rows)))
-  # A tear across the chart, centred in the gap between the highest and
-  # lowest (two blank rows, so it stays clear of the rows either side)
-  gap <- which(is.na(rows$value) & !rows$heading)
-  if (length(gap)) {
-    e <- htmlwidgets::onRender(e, tear_js(gap - 1, grid_left = e$x$opts$grid$left, grid_right = e$x$opts$grid$right))
+  add_tear(e, rows)
+}
+
+# Highest and lowest ------------------------------------------------------------
+#
+# A long ranking (the lollipop, dumbbell and ranked bar charts) can show
+# only its highest and lowest few, on one scale, with a heading over each
+# group and a torn-paper break between them.
+
+# The rows of a ranked chart, from the bottom of the chart up: every row of
+# `data` (smallest first), or with more than twice `extremes` rows, the
+# lowest few, a "Lowest" heading, two blank gap rows (for the tear) and the
+# highest few with a "Highest" heading on top. Keeps `data`'s columns (NA
+# for headings and the gap, apart from name) and adds `heading` (TRUE for
+# headings).
+split_rows <- function(data, extremes = NULL) {
+  out <- data
+  out$heading <- rep(FALSE, nrow(out))
+  if (is.null(extremes) || nrow(data) <= 2 * extremes) {
+    return(out)
   }
-  e
+  # A row of NAs of the right types, with this name. Category names must be
+  # unique, so the two blank gap rows differ: one space and two.
+  blank <- function(name, heading) {
+    row <- out[1, , drop = FALSE]
+    row[] <- lapply(row, \(col) col[NA_integer_])
+    row$name <- name
+    row$heading <- heading
+    row
+  }
+  out <- rbind(
+    utils::head(out, extremes), blank("Lowest", TRUE),
+    blank(" ", FALSE), blank("  ", FALSE),
+    utils::tail(out, extremes), blank("Highest", TRUE)
+  )
+  rownames(out) <- NULL
+  out
+}
+
+# The gap rows of split_rows() output (1-based); none if nothing was left out
+split_gap <- function(rows) {
+  which(!rows$heading & !nzchar(trimws(rows$name)))
+}
+
+# A country axis for split_rows() output, with the headings in the label
+# column in semibold, like a small heading
+split_axis <- function(rows, label_width) {
+  axis <- country_axis(rows$name, label_width)
+  headings <- rows$name[rows$heading]
+  if (length(headings)) {
+    axis$axisLabel$formatter <- htmlwidgets::JS(sprintf(
+      "v => [%s].includes(v) ? '{heading|' + v + '}' : v",
+      paste(vapply(headings, js_string, ""), collapse = ", ")
+    ))
+    axis$axisLabel$rich <- list(heading = list(fontWeight = 600, fontSize = 12, color = highlight_color))
+  }
+  axis
+}
+
+# A tear across chart `e`, centred in the gap between the highest and
+# lowest (two blank rows, so it stays clear of the rows either side); `e`
+# unchanged if every row is shown
+add_tear <- function(e, rows) {
+  gap <- split_gap(rows)
+  if (!length(gap)) {
+    return(e)
+  }
+  htmlwidgets::onRender(e, tear_js(gap - 1, grid_left = e$x$opts$grid$left, grid_right = e$x$opts$grid$right))
+}
+
+# A series markLine: a dashed vertical line at `median`, labeled above the
+# plot (charts leave 32px or more above the plot for it). NULL for no line.
+median_line <- function(median, digits = 1) {
+  if (is.null(median)) {
+    return(NULL)
+  }
+  list(
+    silent = TRUE,
+    symbol = "none",
+    data = list(list(xAxis = median)),
+    lineStyle = list(color = social_muted, type = "dashed", width = 1),
+    label = list(
+      position = "end",
+      color = plot_colors$text,
+      fontSize = 12,
+      formatter = paste("Median", format(round(median, digits), nsmall = digits))
+    )
+  )
 }
 
 # JS for htmlwidgets::onRender(): a torn-paper break across the plot,
@@ -191,53 +249,27 @@ tear_js <- function(rows, grid_left, grid_right) {
   )
 }
 
-# The rows of a lollipop chart, from the bottom of the chart up: every row
-# of `data` (smallest first), or with `extremes`, the lowest few, a heading,
-# two blank gap rows (for the tear) and the highest few with their heading
-# on top. Columns: name, value, year (NA for headings and the gap), heading
-# (TRUE for headings).
-lollipop_rows <- function(data, extremes = NULL) {
-  out <- data.frame(name = data$name, value = data$value, year = data$year, heading = FALSE)
-  if (is.null(extremes) || nrow(data) <= 2 * extremes) {
-    return(out)
-  }
-  label_row <- function(name) data.frame(name = name, value = NA_real_, year = NA_integer_, heading = TRUE)
-  low <- utils::head(out, extremes)
-  high <- utils::tail(out, extremes)
-  # Category names must be unique, so the two blank rows differ: one space
-  # and two
-  gap <- function(name) {
-    row <- label_row(name)
-    row$heading <- FALSE
-    row
-  }
-  out <- rbind(
-    low, label_row(sprintf("Lowest %d", extremes)),
-    gap(" "), gap("  "),
-    high, label_row(sprintf("Highest %d", extremes))
-  )
-  rownames(out) <- NULL
-  out
-}
-
 # Dumbbell chart ----------------------------------------------------------------
 
 # A grey dot for each country's early value and a blue dot for its latest,
-# joined by a line. `data` comes from change_since().
-dumbbell_chart <- function(data, label, digits = 0) {
-  label_width <- country_label_width(data$name)
-  point <- function(i, which) {
-    list(
-      value = list(data[[which]][i], data$name[i]),
-      name = data$name[i],
-      start = data$start[i], start_year = data$start_year[i],
-      end = data$end[i], end_year = data$end_year[i]
-    )
-  }
-  rows <- seq_len(nrow(data))
+# joined by a line. `data` comes from change_since(), sorted by the latest
+# value. `extremes` and `median` as for lollipop_chart(); `median` is of
+# the latest values.
+dumbbell_chart <- function(data, label, digits = 0, extremes = NULL, median = NULL) {
   # "Around 2000", or the year itself when every start value is from it
   # (e.g. the regional figures, which start in 2005)
   start_name <- if (length(unique(data$start_year)) == 1) as.character(data$start_year[1]) else "Around 2000"
+  rows <- split_rows(data[, c("name", "start_year", "start", "end_year", "end")], extremes)
+  label_width <- country_label_width(rows$name)
+  point <- function(i, which) {
+    list(
+      value = list(rows[[which]][i], rows$name[i]),
+      name = rows$name[i],
+      start = rows$start[i], start_year = rows$start_year[i],
+      end = rows$end[i], end_year = rows$end_year[i]
+    )
+  }
+  countries <- which(!is.na(rows$end))
 
   e <- social_base_chart() |>
     plot_tooltip(
@@ -249,27 +281,32 @@ dumbbell_chart <- function(data, label, digits = 0) {
         tooltip_number_js(digits), js_string(label)
       ))
     )
-  e$x$opts$grid <- list(left = label_width + 24, right = 24, top = 32, bottom = 48)
-  e$x$opts$yAxis <- list(country_axis(data$name, label_width))
+  # Room above the plot for the legend, and below it for the median line's
+  # label
+  e$x$opts$grid <- list(left = label_width + 24, right = 24, top = if (is.null(median)) 32 else 52, bottom = 48)
+  e$x$opts$yAxis <- list(split_axis(rows, label_width))
   e$x$opts$xAxis <- list(value_axis(label, min = 0))
   e$x$opts$legend <- list(
     show = TRUE, top = 0, right = 0,
     data = list(start_name, "Latest"),
     textStyle = list(color = plot_colors$text)
   )
+  latest <- list(type = "scatter", name = "Latest", data = lapply(countries, point, "end"),
+                 symbolSize = 9, z = 4, itemStyle = list(color = plot_colors$bar))
+  latest$markLine <- median_line(median, digits)
   e$x$opts$series <- list(
     # Connectors: an invisible bar up to the smaller value, then a thin bar
-    # spanning the change, stacked
+    # spanning the change, stacked (none for the heading and gap rows)
     list(type = "bar", stack = "connector", silent = TRUE, barWidth = 2,
-         data = as.list(pmin(data$start, data$end)), itemStyle = list(color = "transparent")),
+         data = as.list(pmin(rows$start, rows$end)), itemStyle = list(color = "transparent")),
     list(type = "bar", stack = "connector", silent = TRUE, barWidth = 2,
-         data = as.list(abs(data$end - data$start)), itemStyle = list(color = social_muted)),
-    list(type = "scatter", name = start_name, data = lapply(rows, point, "start"),
+         data = as.list(abs(rows$end - rows$start)), itemStyle = list(color = social_muted)),
+    list(type = "scatter", name = start_name, data = lapply(countries, point, "start"),
          symbolSize = 8, z = 3, itemStyle = list(color = light_dark("#8d8d8d", "#a8a8a8"))),
-    list(type = "scatter", name = "Latest", data = lapply(rows, point, "end"),
-         symbolSize = 9, z = 4, itemStyle = list(color = plot_colors$bar))
+    latest
   )
-  htmlwidgets::onRender(e, resize_to_rows_js(nrow(data)))
+  e <- htmlwidgets::onRender(e, resize_to_rows_js(nrow(rows), extra = if (is.null(median)) 0 else 20))
+  add_tear(e, rows)
 }
 
 # Histogram ---------------------------------------------------------------------

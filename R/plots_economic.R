@@ -157,16 +157,26 @@ growth_pieces <- list(
 )
 
 # A cell per country and year, colored by its value. `grid` comes from
-# yearly_grid(); countries are rows, in alphabetical order from the top.
-growth_heatmap <- function(grid, label) {
-  names <- sort(unique(grid$name))
+# yearly_grid(); countries are rows, ranked by their compounded average
+# yearly growth (growth_ranking()), fastest at the top. `extremes`: as for
+# lollipop_chart(), show only the fastest and slowest few.
+growth_heatmap <- function(grid, label, extremes = NULL) {
+  ranking <- growth_ranking(grid)
+  rows <- split_rows(ranking, extremes)
+  names <- rows$name
+  # Cells for the countries shown only
+  grid <- grid[grid$name %in% names[!is.na(rows$annual)], , drop = FALSE]
   years <- seq(min(grid$year), max(grid$year))
   label_width <- country_label_width(names)
   cells <- lapply(seq_len(nrow(grid)), function(i) {
+    r <- match(grid$name[i], names)
     list(
-      value = list(match(grid$year[i], years) - 1, match(grid$name[i], names) - 1, round(grid$value[i], 1)),
+      value = list(match(grid$year[i], years) - 1, r - 1, round(grid$value[i], 1)),
       country = grid$name[i],
-      year = grid$year[i]
+      year = grid$year[i],
+      span = if (rows$first[r] == rows$last[r]) as.character(rows$first[r]) else paste0(rows$first[r], "–", rows$last[r]),
+      total = round(rows$total[r], 1),
+      annual = round(rows$annual[r], 1)
     )
   })
   legend_height <- 32
@@ -175,10 +185,11 @@ growth_heatmap <- function(grid, label) {
     plot_tooltip(
       trigger = "item",
       formatter = htmlwidgets::JS(sprintf(
-        "p => { const v = Number(p.value[2]);
-          return '<strong>' + p.data.country + '</strong><br/>' + p.data.year + ': ' + (v > 0 ? '+' : '') +
-            v.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%%' +
-            '<br/>' + %s; }",
+        "p => { const d = p.data;
+          const pct = v => (v > 0 ? '+' : '') +
+            Number(v).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%%';
+          return '<strong>' + d.country + '</strong><br/>' + %s + '<br/>' + d.year + ': ' + pct(p.value[2]) +
+            '<br/>' + d.span + ': ' + pct(d.annual) + ' a year, ' + pct(d.total) + ' in total'; }",
         js_string(label)
       ))
     )
@@ -191,8 +202,8 @@ growth_heatmap <- function(grid, label) {
     axisTick = list(show = FALSE),
     splitArea = list(show = FALSE)
   ))
-  # inverse: the first (alphabetical) country at the top
-  e$x$opts$yAxis <- list(c(country_axis(names, label_width), list(inverse = TRUE)))
+  # The first row (slowest growth) at the bottom, the fastest at the top
+  e$x$opts$yAxis <- list(split_axis(rows, label_width))
   e$x$opts$visualMap <- list(list(
     type = "piecewise",
     dimension = 2,
@@ -211,18 +222,25 @@ growth_heatmap <- function(grid, label) {
     itemStyle = list(borderColor = "var(--cds-layer-01)", borderWidth = 1),
     emphasis = list(itemStyle = list(borderColor = highlight_color, borderWidth = 1))
   ))
-  htmlwidgets::onRender(e, resize_to_rows_js(length(names), extra = legend_height))
+  e <- htmlwidgets::onRender(e, resize_to_rows_js(length(names), extra = legend_height))
+  add_tear(e, rows)
 }
 
 # Ranked bars -------------------------------------------------------------------
 
 # A bar per country at its latest value, largest at the top. `data` comes
 # from ranked_latest(). Rows named in `highlight` get a different color.
-ranked_bar_chart <- function(data, label, digits = 1, highlight = NULL) {
-  label_width <- country_label_width(data$name)
-  bars <- lapply(seq_len(nrow(data)), function(i) {
-    bar <- list(value = data$value[i], year = data$year[i])
-    if (data$name[i] %in% highlight) bar$itemStyle <- list(color = highlight_color)
+# `extremes` and `median` as for lollipop_chart().
+ranked_bar_chart <- function(data, label, digits = 1, highlight = NULL, extremes = NULL, median = NULL) {
+  rows <- split_rows(data[, c("name", "year", "value")], extremes)
+  label_width <- country_label_width(rows$name)
+  bars <- lapply(seq_len(nrow(rows)), function(i) {
+    # Heading and gap rows: no bar
+    if (is.na(rows$value[i])) {
+      return(NA)
+    }
+    bar <- list(value = rows$value[i], year = rows$year[i])
+    if (rows$name[i] %in% highlight) bar$itemStyle <- list(color = highlight_color)
     bar
   })
 
@@ -234,8 +252,9 @@ ranked_bar_chart <- function(data, label, digits = 1, highlight = NULL) {
         tooltip_number_js(digits), js_string(label)
       ))
     )
-  e$x$opts$grid <- list(left = label_width + 24, right = 24, top = 16, bottom = 48)
-  e$x$opts$yAxis <- list(country_axis(data$name, label_width))
+  # Room above the plot for the median line's label
+  e$x$opts$grid <- list(left = label_width + 24, right = 24, top = if (is.null(median)) 16 else 32, bottom = 48)
+  e$x$opts$yAxis <- list(split_axis(rows, label_width))
   e$x$opts$xAxis <- list(value_axis(label, scale = FALSE))
   e$x$opts$series <- list(list(
     type = "bar",
@@ -244,5 +263,7 @@ ranked_bar_chart <- function(data, label, digits = 1, highlight = NULL) {
     itemStyle = list(color = plot_colors$bar),
     emphasis = list(itemStyle = list(color = light_dark("#0043ce", "#78a9ff")))
   ))
-  htmlwidgets::onRender(e, resize_to_rows_js(nrow(data)))
+  e$x$opts$series[[1]]$markLine <- median_line(median, digits)
+  e <- htmlwidgets::onRender(e, resize_to_rows_js(nrow(rows)))
+  add_tear(e, rows)
 }
