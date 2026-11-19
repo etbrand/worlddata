@@ -431,12 +431,13 @@
     },
     "carbonite": {
       "Package": "carbonite",
-      "Version": "0.0.0.9000",
+      "Version": "0.1.0",
       "Source": "GitHub",
-      "Title": "A Carbon Design System Toolkit for Shiny",
-      "Authors@R": "person(\"Evan\", \"Brand\", , \"etbrand@gmail.com\", role = c(\"aut\", \"cre\"))",
-      "Description": "Encapsulate your Shiny applications in the IBM Carbon Design  System using high-performance web components. By leveraging the  '@carbon/web-components' library, 'carbonite' allows developers to  build enterprise-grade, accessible, and high-performance user  interfaces without writing custom CSS or complex JavaScript. Designed  for developers who need a reliable and professional aesthetic, the  package includes a suite of atomic components and complex layout  structures such as data tables and side-navigation.",
+      "Title": "Components from the 'Carbon Design System' for 'shiny'",
+      "Authors@R": "c( person(\"Evan\", \"Brand\", , \"etbrand@gmail.com\", role = c(\"aut\", \"cre\", \"cph\")), person(\"IBM Corp.\", role = \"cph\", comment = \"'Carbon Design System' web components, styles and icons; IBM Plex fonts\"), person(\"Google LLC\", role = \"cph\", comment = \"'Lit' library\"), person(\"Floating UI contributors\", role = \"cph\", comment = \"'Floating UI' library\"), person(\"OpenJS Foundation and other contributors\", role = \"cph\", comment = \"'lodash' library\"), person(\"Gregory\", \"Petrosyan\", role = \"cph\", comment = \"'flatpickr' library\"), person(\"Adobe\", role = \"cph\", comment = \"'@internationalized/number' library\") )",
+      "Description": "Build 'shiny' apps with the 'Carbon Design System' <https://carbondesignsystem.com/>. Wraps IBM's '@carbon/web-components' as 'shiny' inputs, outputs and layouts, including buttons, text, date and time inputs, selects, sliders, data tables with sorting, selection, pagination and expandable rows, modals, notifications, menus, tabs, tiles and an application shell with side navigation.",
       "License": "MIT + file LICENSE",
+      "Copyright": "See the file inst/COPYRIGHTS for the copyright holders and licenses of the bundled 'Carbon Design System' code and fonts.",
       "URL": "https://github.com/etbrand/carbonite",
       "BugReports": "https://github.com/etbrand/carbonite/issues",
       "Depends": [
@@ -460,9 +461,9 @@
       "RemoteRepo": "carbonite",
       "RemoteUsername": "etbrand",
       "RemoteRef": "HEAD",
-      "RemoteSha": "68e5376a301861fe9014f1f027f22b1b6453050d",
+      "RemoteSha": "0960b5bcc51c53a03b104bc0a57c48e9cb3f6130",
       "NeedsCompilation": "no",
-      "Author": "Evan Brand [aut, cre]",
+      "Author": "Evan Brand [aut, cre, cph], IBM Corp. [cph] ('Carbon Design System' web components, styles and icons; IBM Plex fonts), Google LLC [cph] ('Lit' library), Floating UI contributors [cph] ('Floating UI' library), OpenJS Foundation and other contributors [cph] ('lodash' library), Gregory Petrosyan [cph] ('flatpickr' library), Adobe [cph] ('@internationalized/number' library)",
       "Maintainer": "Evan Brand <etbrand@gmail.com>"
     },
     "cli": {
